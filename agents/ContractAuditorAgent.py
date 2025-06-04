@@ -7,6 +7,7 @@ from agents.BaseAgent import BaseAgent
 from knowledge_maps.ContractTextTemplate import CONTRACT_TEMPLATE_V1
 from knowledge_maps.audit_checklist_dict import audit_checklist_dict
 from umowa_najmu import UMOWA_NAJMU
+from structures.ContractGenerationStructure import Contract
 
 #Audytor - ma on przeprowadzać audyt - implementuje metode run - wołą perform audit i wynik zapisuje do audit_history
 class ContractAuditorAgent(BaseAgent):
@@ -14,10 +15,42 @@ class ContractAuditorAgent(BaseAgent):
         # Call parent's __init__ to properly initialize the context
         super().__init__(process_context, client)
         # Initialize agent-specific attributes
-        self.current_contract = CONTRACT_TEMPLATE_V1
+        #self.current_contract = CONTRACT_TEMPLATE_V1
         self.audit_checklist = AuditChecklist(**audit_checklist_dict)
-        self.current_contract_new = UMOWA_NAJMU
+        #self.__contract = process_context.current_contract
+
+    def _verbose(self, thoughts = False)-> str:
+        response = ""
+        if len(self.context.current_contract.paragraphs) == 0:
+            logger.warning("Nie wygenerowano żadnych paragrafów")
         
+        response += f"{self.__contract.title}\n"
+        response += f"\n\n"
+            
+        for p in self.context.current_contract.paragraphs:
+            logger.info(f"Paragraf {p.id}: {p.title}")
+            response += f"Paragraf {p.id}: {p.title}\n"
+            
+            """for t in p.chain_of_thought:
+                logger.thought(f"[Paragraph - thought]: {t}")
+                response += f"[Paragraph - thought]: {t}\n"
+            """
+            for c in p.clauses:
+                logger.action(f"Klauzula {c.id}: {c.text}")
+                response += f"{c.id}: {c.text}\n"
+                #WYjebać printowanie chain_of_thought - zupełnie nie potrzebne
+                if thoughts:
+                    for t in c.chain_of_thought:
+                        logger.thought(f"[Clause - thought]: {t}")
+                        response += f"[Clause - thought]: {t}\n"
+                
+                    logger.info(c.template)
+                    response += f"Clause template: {c.template.model_dump_json(indent=2)}\n"
+                
+                response += "-" * 50 + "\n"
+        
+        return response
+
     def run(self) -> bool:
         logger.info(f"[ContractAuditorAgent] Auditing contract... Version: {self.context.metadata.current_version}")
         audit_result = self._perform_audit()
@@ -58,6 +91,8 @@ class ContractAuditorAgent(BaseAgent):
         
         # Przeprowadzenie audytu z wykorzystaniem LLM
         logger.info("Rozpoczynam audyt umowy z wykorzystaniem LLM")
+        self.current_contract_new = self._verbose()
+        logger.info("Current contract: \n" + self.current_contract_new)
         
         system_prompt = """
         Jesteś ekspertem prawnym AI specjalizującym się w analizie umów. 
@@ -97,7 +132,7 @@ class ContractAuditorAgent(BaseAgent):
             )
             
             # Dodaj odpowiedź modelu do historii LLM
-            self.context.metadata.llm_history.append({"role": "assistant", "content": str(response)})
+            self.context.metadata.llm_history.append({"role": "assistant", "content": response})
             
             logger.info(f"Otrzymano wynik audytu: znaleziono {len(response.risks)} potencjalnych ryzyk")
             

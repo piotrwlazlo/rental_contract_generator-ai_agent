@@ -6,11 +6,10 @@ from structures.AuditRiskStructures import AuditResult
 from structures.ContractGenerationStructure import Contract, Paragraph  
 from agents.BaseAgent import BaseAgent
 
-
 class ContractReviserAgent(BaseAgent):
     def __init__(self, context: ProcessContext, client: OpenAI):
         super().__init__(context, client)
-        #self._contract_data = Contract()
+        # The contract will be accessed from the context when needed
         
 
     def run(self) -> bool:
@@ -31,7 +30,8 @@ class ContractReviserAgent(BaseAgent):
 
     #Metoda naprawiająca błędy w umowie na podstawie wyników audytu
     def _apply_changes(self, last_audit: AuditResult) -> bool:
-        _contract_data = Contract()
+        _contract_data = self.context.current_contract
+        
         logger.info(f"Rozpoczynam proces wprowadzania zmian na podstawie audytu")
         logger.info(f"Ostatni audit: {last_audit}")
 
@@ -63,7 +63,7 @@ class ContractReviserAgent(BaseAgent):
             paragraph_details_for_llm += f"Tytuł: {matching_paragraph_obj.title}\n\n"
             paragraph_details_for_llm += "Klauzule:\n"
             for clause_obj in matching_paragraph_obj.clauses:
-                paragraph_details_for_llm += f"  Klauzula {clause_obj.id}: {clause_obj.text}\n"
+                paragraph_details_for_llm += f" {clause_obj.id}: {clause_obj.text}\n"
             paragraph_details_for_llm += "\n" # Dodatkowa nowa linia dla czytelności
 
             # Budowanie promptu dla LLM
@@ -77,6 +77,9 @@ class ContractReviserAgent(BaseAgent):
             
             PROBLEM DO ROZWIĄZANIA:
             {risk.content}
+            
+            UZASADNIENIE PROBLEMU:
+            {risk.chain_of_thought}
             
             SUGEROWANE ZMIANY PRZEZ AUDYT (potraktuj jako wskazówki, niekoniecznie dosłowne instrukcje):
             {', '.join(risk.suggested_changes)}

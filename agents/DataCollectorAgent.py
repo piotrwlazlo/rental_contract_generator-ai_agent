@@ -148,12 +148,12 @@ Kaucja 4500 zł.
                     # Validate the contract data
                     try:
                         contract_dict = self.current_contract.model_dump(exclude_none=True)
-                        final_contract_data = ContractData(**contract_dict)
+                        self.context.contract_data = ContractData(**contract_dict)
                         
                         # Store the validated contract data in the context
-                        self.context.contract_data = final_contract_data
+                        #final_contract_data = ContractData(**contract_dict)
                         # Note: We don't modify ContractStatus here - that's ContractCoordinator's responsibility
-                        logger.info(f"Updated ProcessContext with validated contract data: {final_contract_data}")
+                        logger.info(f"Updated ProcessContext with validated contract data: {self.context.contract_data}")
                         
                         logger.success("[DataCollectorAgent] Zbieranie danych zakończone pomyślnie i zwalidowane.")
                         return True

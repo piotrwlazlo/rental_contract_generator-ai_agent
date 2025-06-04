@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, StringConstraints
-from typing import Dict, Optional, List, Annotated
+from pydantic import BaseModel, Field
+from typing import Dict, Optional, List
 from datetime import date, datetime
+from structures.ContractData import Party
 
 class ClauseTemplate(BaseModel):
     """
@@ -63,23 +64,24 @@ class Clause(BaseModel):
     )
     note: Optional[str] = Field(None, description="Dodatkowy komentarz lub uwaga do klauzuli.")
 
+"""
 class PartyDetails(BaseModel):
     """
-    Reprezentuje dane strony umowy.
-    """
-    first_name: str = Field(..., description="Imię")
-    last_name: str = Field(..., description="Nazwisko")
+    #Reprezentuje dane strony umowy.
+"""
+    name: str = Field(..., description="Imię i nazwisko")
     address: str = Field(..., description="Adres zamieszkania")
     pesel: Annotated[str, StringConstraints(pattern=r'^\d{11}$')] = Field(
         ..., 
         description="Numer PESEL - 11 cyfr"
     )
+    """
 
 class Preamble(BaseModel):
     """
     Reprezentuje preambułę umowy, zawierającą dane stron i inne informacje wprowadzające.
     """
-    contract_date: date = Field(
+    contract_date: str = Field(
         ..., 
         description="Data zawarcia umowy"
     )
@@ -87,11 +89,11 @@ class Preamble(BaseModel):
         ..., 
         description="Miejsce zawarcia umowy"
     )
-    party_one: PartyDetails = Field(
+    party_one: Party = Field(
         ..., 
         description="Pierwsza strona umowy (zazwyczaj Wynajmujący)"
     )
-    party_two: PartyDetails = Field(
+    party_two: Party = Field(
         ..., 
         description="Druga strona umowy (zazwyczaj Najemca)"
     )

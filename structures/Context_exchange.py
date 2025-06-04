@@ -2,7 +2,9 @@ from typing import List, Dict, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 from structures.ContractStatus import ContractStatus
-from structures.ContractData import ContractData, AuditResult
+from structures.ContractGenerationStructure import Contract
+from structures.AuditRiskStructures import AuditResult
+from structures.ContractData import ContractData
 
 #Struktura dla metadanych w procesie agenta np. status (który agent wykonuje pracę), llm_history czyli wszystkie prompty oraz odpowiedzi od agentów
 #current_version dla audytora - jeśli audytor coś poprawi ma się zwiększyć wersja wraz z maksymalną ilością prób
@@ -20,5 +22,6 @@ class ProcessMetadata(BaseModel):
 
 class ProcessContext(BaseModel):
     """Kontekst całego procesu łączący dane umowy i metadane"""
+    current_contract: Optional[Contract] = Field(None)
     contract_data: Optional[ContractData] = Field(None)
     metadata: ProcessMetadata = Field(ProcessMetadata())

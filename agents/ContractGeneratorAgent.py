@@ -4,10 +4,7 @@ from agents.BaseAgent import BaseAgent
 from structures.Context_exchange import ProcessContext
 from knowledge_maps.ContractTextTemplate import CONTRACT_TEMPLATE_V1
 from knowledge_maps.ContractSetupKnowledgeMaps import CONTRACT_KNOWLEDGE_MAP
-from structures.ContractGenerationStructure import Contract, PartContract
-from io import StringIO
-import sys
-import os
+from structures.ContractGenerationStructure import Contract, PartContract, Preamble
 
 class ContractGeneratorAgent(BaseAgent):
     def __init__(self, process_context: ProcessContext, client: OpenAI):
@@ -16,7 +13,7 @@ class ContractGeneratorAgent(BaseAgent):
         self.contract_knowledge_map = CONTRACT_KNOWLEDGE_MAP
         self.__result = PartContract(paragraphs=[])
         #self.__contract = Contract()
-             
+        #self.__contract = self._init_contract()             
     
     def contract_parts(self, text, max_elementy, sep="## "):
         lst = text.split(sep)[1:]
@@ -32,7 +29,7 @@ class ContractGeneratorAgent(BaseAgent):
         wykonując osobne wywołania API dla każdego fragmentu.
         """
         # Podziel CONTRACT_KNOWLEDGE_MAP na mniejsze fragmenty (chunks)
-        chunks = self.contract_parts(self.contract_knowledge_map, 1)  # Podziel na fragmenty po 3 paragrafy
+        chunks = self.contract_parts(self.contract_knowledge_map, 3)  # Podziel na fragmenty po 3 paragrafy
         logger.info(f"Podzielono wiedzę o kontraktach na {len(chunks)} fragmentów")
         
         # Inicjalizuj pustą listę paragrafów dla wyniku końcowego
@@ -101,17 +98,40 @@ class ContractGeneratorAgent(BaseAgent):
         logger.info(f"[ContractGeneratorAgent]: Zakończono generowanie umowy, utworzono {len(all_paragraphs)} paragrafów")
         
         return self.__result
+    
+    def _create_preamble(self):
+        return Preamble(
+            contract_date='2025-06-03',
+            contract_location="Warszawa",
+            party_one=self.context.contract_data.lessor,
+            party_two=self.context.contract_data.lessee
+        )
+    
+    def _init_contract(self):
+        return Contract(
+            paragraphs=self.__result.paragraphs,
+            title="Umowa najmu mieszkania",
+            preamble=self._create_preamble(),
+            version='1',
+        )
 
     def run(self) -> bool:
         logger.info(f"[ContractGeneratorAgent] Generating contract... Version: {self.context.metadata.current_version}")
-        logger.info(f"Contract data: {self.context.contract_data}")
+        #logger.info(f"Contract data: {self.context.contract_data}")
         
         # Wywołaj metodę __process_contract, która teraz przetwarza fragmenty CONTRACT_KNOWLEDGE_MAP
         try:
             # Generowanie kontraktu
             response = self.__process_contract()
             logger.info(f"Wygenerowano kontrakt z {len(response.paragraphs)} paragrafami")
+
+            #Initialize Contract() model
+            self.context.current_contract = self._init_contract()
+            logger.info(f"Zainicjalizowano kontrakt z {len(self.context.current_contract.paragraphs)} paragrafami")
             
+            logger.info("Zapisano obiekt Contract w kontekście procesu dla innych agentów")
+            
+            """
             # Utwórz ścieżkę bazową projektu dla wszystkich plików wynikowych
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             
@@ -127,6 +147,7 @@ class ContractGeneratorAgent(BaseAgent):
                 logger.info(f"Zapisano szczegółową umowę do pliku '{verbose_file}'")
             except Exception as verbose_error:
                 logger.error(f"Błąd podczas generowania szczegółowej umowy: {verbose_error}")
+                """
             """       
             # Zapisz wersję z myślami   
             try:
@@ -148,34 +169,4 @@ class ContractGeneratorAgent(BaseAgent):
             logger.error(f"Błąd podczas generowania umowy: {e}")
             return False
 
-    def verbose(self, thoughts = False)-> str:
-        response = ""
-        if len(self.__contract.paragraphs) == 0:
-            logger.warning("Nie wygenerowano żadnych paragrafów")
-        
-        #response += f"{self.__contract.title}\n"
-        #response += f"\n\n"
-            
-        for p in self.__contract.paragraphs:
-            logger.info(f"Paragraf {p.id}: {p.title}")
-            response += f"Paragraf {p.id}: {p.title}\n"
-            
-            """for t in p.chain_of_thought:
-                logger.thought(f"[Paragraph - thought]: {t}")
-                response += f"[Paragraph - thought]: {t}\n"
-            """
-            for c in p.clauses:
-                logger.action(f"Klauzula {c.id}: {c.text}")
-                response += f"Klauzula {c.id}: {c.text}\n"
-                #WYjebać printowanie chain_of_thought - zupełnie nie potrzebne
-                if thoughts:
-                    for t in c.chain_of_thought:
-                        logger.thought(f"[Clause - thought]: {t}")
-                        response += f"[Clause - thought]: {t}\n"
-                
-                    logger.info(c.template)
-                    response += f"Clause template: {c.template.model_dump_json(indent=2)}\n"
-                
-                response += "-" * 50 + "\n"
-        
-        return response
+    
