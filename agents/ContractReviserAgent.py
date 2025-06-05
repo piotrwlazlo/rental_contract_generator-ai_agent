@@ -9,8 +9,6 @@ from agents.BaseAgent import BaseAgent
 class ContractReviserAgent(BaseAgent):
     def __init__(self, context: ProcessContext, client: OpenAI):
         super().__init__(context, client)
-        # The contract will be accessed from the context when needed
-        
 
     def run(self) -> bool:
         logger.info(f"[ContractReviserAgent] Revising contract... Version: {self.context.metadata.current_version}")
@@ -86,7 +84,10 @@ class ContractReviserAgent(BaseAgent):
             
             FRAGMENT UMOWY:
             {paragraph_details_for_llm}
-            
+
+            KLUCZOWE DANE KONTRAKTU:
+            {self.context.contract_data}
+
             Proszę o zaproponowanie konkretnej poprawki do umowy, która rozwiąże ten problem.
             Jeżeli problem odnosi się tylko do jednej konkretnej klauzuli zmodyfikuj tylko tą klauzulę, 
             resztę klauzul pozostaw bez zmian
@@ -95,7 +96,7 @@ class ContractReviserAgent(BaseAgent):
             try:
                 # Wywołanie API do LLM
                 response = self.client.chat.completions.create(
-                    model="deepseek/deepseek-r1-0528",
+                    model="openai/gpt-4.1-mini",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt}
@@ -139,22 +140,20 @@ class ContractReviserAgent(BaseAgent):
                     "suggested_changes": risk.suggested_changes,
                     "llm_response": response
                 })
-                # Nie zwracamy False od razu, próbujemy przetworzyć inne ryzyka
                 continue # Przejdź do następnego ryzyka
-        
-        # Tutaj możemy dodać logikę do aktualizacji umowy na podstawie odpowiedzi LLM
-        # Na razie tylko zapisujemy odpowiedzi do historii LLM
         
         self.context.metadata.llm_history.append({
             "role": "system", 
             "content": f"Propozycje zmian w umowie na podstawie audytu ({len(llm_responses)} ryzyk)"
         })
         
-        for i, response in enumerate(llm_responses):
+        for i, responses in enumerate(llm_responses):
             self.context.metadata.llm_history.append({
                 "role": "assistant", 
-                "content": f"Ryzyko {i+1}: {response['risk'][:100]}...\nOdpowiedź: {response['llm_response']}"
+                "content": f"Ryzyko {i+1}: {responses['risk']}...\nOdpowiedź: {responses['suggested_changes']}"
             })
             
         logger.success(f"Wprowadzono propozycje zmian dla {len(llm_responses)} ryzyk")
         return True
+
+    

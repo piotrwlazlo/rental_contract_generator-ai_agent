@@ -8,23 +8,6 @@ import instructor
 import os
 from dotenv import load_dotenv
 
-def get_starting_agent():
-    """
-    Asks the user which agent they want to start the process from.
-    Returns the appropriate ContractStatus enum value.
-    """
-    print("\nWybierz, od którego agenta chcesz rozpocząć proces:")
-    print("1. DataCollectorAgent - Zbieranie danych (domyślnie)")
-    print("2. ContractAuditorAgent - Audytowanie umowy")
-    
-    choice = input("Twój wybór (1 lub 2): ").strip()
-    
-    if choice == "2":
-        logger.info("Wybrano rozpoczęcie procesu od agenta audytującego.")
-        return ContractStatus.AUDITING
-    else:
-        logger.info("Wybrano standardowy początek procesu od agenta zbierającego dane.")
-        return ContractStatus.COLLECTING_DATA
 
 if __name__ == "__main__":
     load_dotenv()
@@ -35,7 +18,7 @@ if __name__ == "__main__":
     client = instructor.patch(client, mode=instructor.Mode.MD_JSON)
     
     # Get user's preferred starting agent
-    starting_status = get_starting_agent()
+    starting_status = ContractStatus.COLLECTING_DATA
     
     # Initialize the coordinator with the chosen starting status
     agent = ContractCoordinator(client)

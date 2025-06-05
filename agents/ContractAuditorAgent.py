@@ -4,41 +4,31 @@ from openai import OpenAI
 from structures.Context_exchange import ProcessContext
 from structures.AuditRiskStructures import AuditResult, Risk, AuditChecklist
 from agents.BaseAgent import BaseAgent
-from knowledge_maps.ContractTextTemplate import CONTRACT_TEMPLATE_V1
 from knowledge_maps.audit_checklist_dict import audit_checklist_dict
-from umowa_najmu import UMOWA_NAJMU
-from structures.ContractGenerationStructure import Contract
 
 #Audytor - ma on przeprowadzać audyt - implementuje metode run - wołą perform audit i wynik zapisuje do audit_history
 class ContractAuditorAgent(BaseAgent):
     def __init__(self, process_context: ProcessContext, client: OpenAI):
         # Call parent's __init__ to properly initialize the context
         super().__init__(process_context, client)
-        # Initialize agent-specific attributes
-        #self.current_contract = CONTRACT_TEMPLATE_V1
         self.audit_checklist = AuditChecklist(**audit_checklist_dict)
-        #self.__contract = process_context.current_contract
 
     def _verbose(self, thoughts = False)-> str:
         response = ""
         if len(self.context.current_contract.paragraphs) == 0:
             logger.warning("Nie wygenerowano żadnych paragrafów")
         
-        response += f"{self.__contract.title}\n"
+        response += f"{self.context.current_contract.title}\n"
         response += f"\n\n"
             
         for p in self.context.current_contract.paragraphs:
             logger.info(f"Paragraf {p.id}: {p.title}")
             response += f"Paragraf {p.id}: {p.title}\n"
             
-            """for t in p.chain_of_thought:
-                logger.thought(f"[Paragraph - thought]: {t}")
-                response += f"[Paragraph - thought]: {t}\n"
-            """
             for c in p.clauses:
                 logger.action(f"Klauzula {c.id}: {c.text}")
                 response += f"{c.id}: {c.text}\n"
-                #WYjebać printowanie chain_of_thought - zupełnie nie potrzebne
+                
                 if thoughts:
                     for t in c.chain_of_thought:
                         logger.thought(f"[Clause - thought]: {t}")
@@ -59,14 +49,14 @@ class ContractAuditorAgent(BaseAgent):
         self.context.metadata.audit_history.append(audit_result)
         self.context.metadata.last_update_time = datetime.now()
         
-        # Log information about the audit completion but DON'T increment version
-        # (version is incremented by the ContractReviserAgent)
         version_info = f"Zakończono audyt wersji {self.context.metadata.current_version}"
         logger.info(version_info)
         self.context.metadata.llm_history.append({"role": "system", "content": version_info})
         
         # Log the audit result status - ensure we're reporting the correct number of risks
         if audit_result.is_approved:
+            logger.info("Końcowa umowa\n")
+            logger.info(self._verbose())
             logger.success("Audyt zakończony pomyślnie: Umowa zatwierdzona")
         else:
             risk_count = len(audit_result.risks) if audit_result.risks else 0
@@ -92,7 +82,6 @@ class ContractAuditorAgent(BaseAgent):
         # Przeprowadzenie audytu z wykorzystaniem LLM
         logger.info("Rozpoczynam audyt umowy z wykorzystaniem LLM")
         self.current_contract_new = self._verbose()
-        logger.info("Current contract: \n" + self.current_contract_new)
         
         system_prompt = """
         Jesteś ekspertem prawnym AI specjalizującym się w analizie umów. 
@@ -101,6 +90,9 @@ class ContractAuditorAgent(BaseAgent):
 
         Skup się na zgodności z polskim prawem, wykonalności oraz potencjalnych niejasnościach w tekście. 
         Gdzie to możliwe, dostarczaj praktyczne sugestie.
+        
+        Pamiętaj że audyt ma na celu znalezienie rażących błedów w umowach, jeżeli znajdziesz ryzyko które uznasz za mało istotne - nie podawaj go
+        Jeśli nie znajdziesz w umowie żadnych ryzyk to nie zwracaj nic
         """
 
         user_prompt = f"""
@@ -122,7 +114,7 @@ class ContractAuditorAgent(BaseAgent):
         try:
             logger.debug("Wysyłanie zapytania do modelu LLM w celu przeprowadzenia audytu")
             response = self.client.chat.completions.create(
-                model="deepseek/deepseek-r1-0528",  # Użyj odpowiedniego modelu dostępnego w systemie
+                model="openai/gpt-4.1-mini",  # Użyj odpowiedniego modelu dostępnego w systemie
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -151,7 +143,6 @@ class ContractAuditorAgent(BaseAgent):
                 logger.action(f"Problem: {r.content}")
                 
                 # Logowanie sugerowanych zmian jako zwykłe komunikaty informacyjne
-                # (nie używamy logger.suggestion, ponieważ nie ma takiej metody)
                 for change in r.suggested_changes:
                     logger.info(f"Sugerowana zmiana: {change}")
                 print()
@@ -178,6 +169,3 @@ class ContractAuditorAgent(BaseAgent):
                 timestamp=datetime.now()
             )
 
-#Agent revisor - sprawdza czy audytor zwrócił jakieś poprawki - jeśli nie to ma zwrócić SUCCESS, jeśli nie to pobieramy informacje o
-#najnowszym wpisie od audytora w celu co agent revisor ma naprawić
-#Następnie wywołujemy apply_changes

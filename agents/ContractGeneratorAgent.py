@@ -117,9 +117,7 @@ class ContractGeneratorAgent(BaseAgent):
 
     def run(self) -> bool:
         logger.info(f"[ContractGeneratorAgent] Generating contract... Version: {self.context.metadata.current_version}")
-        #logger.info(f"Contract data: {self.context.contract_data}")
         
-        # Wywołaj metodę __process_contract, która teraz przetwarza fragmenty CONTRACT_KNOWLEDGE_MAP
         try:
             # Generowanie kontraktu
             response = self.__process_contract()
@@ -130,39 +128,6 @@ class ContractGeneratorAgent(BaseAgent):
             logger.info(f"Zainicjalizowano kontrakt z {len(self.context.current_contract.paragraphs)} paragrafami")
             
             logger.info("Zapisano obiekt Contract w kontekście procesu dla innych agentów")
-            
-            """
-            # Utwórz ścieżkę bazową projektu dla wszystkich plików wynikowych
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            
-            # Zapisz wersję szczegółową bez myśli
-            try:
-                # Wywołaj verbose bez myśli
-                verbose_output = self.verbose(thoughts=False)
-                
-                # Zapisz wynik do pliku
-                verbose_file = os.path.join(base_dir, "umowa_najmu_verbose.md")
-                with open(verbose_file, "w", encoding="utf-8") as file:
-                    file.write(verbose_output)
-                logger.info(f"Zapisano szczegółową umowę do pliku '{verbose_file}'")
-            except Exception as verbose_error:
-                logger.error(f"Błąd podczas generowania szczegółowej umowy: {verbose_error}")
-                """
-            """       
-            # Zapisz wersję z myślami   
-            try:
-                
-                # Wywołaj verbose z myślami
-                thoughts_output = self.verbose(thoughts=True)
-                
-                # Zapisz wynik do pliku
-                thoughts_file = os.path.join(base_dir, "umowa_najmu_with_thoughts.md")
-                with open(thoughts_file, "w", encoding="utf-8") as file:
-                    file.write(thoughts_output)
-                logger.info(f"Zapisano umowę z myślami do pliku '{thoughts_file}'")
-            except Exception as thoughts_error:
-                logger.error(f"Błąd podczas generowania umowy z myślami: {thoughts_error}")
-            """
             
             return True
         except Exception as e:

@@ -44,6 +44,7 @@ class Rent(BaseModel):
     payment_schedule: Literal['monthly', 'quarterly', 'annually'] = Field("monthly", description="Harmonogram płatności, np. 'monthly', 'quarterly', 'annually'")
     payment_day: int = Field(10, ge=1, le=31, description="Dzień miesiąca, w którym płatność jest dokonywana (1-31), np. 10")
     payment_method: Literal['bank_transfer', 'cash', 'credit_card'] = Field("bank_transfer", description="Sposób płatności, np. 'bank_transfer', 'cash', 'credit_card'")
+    bank_account_number: Optional[str] = Field(..., description="NUmer konta bankowego jeśli metodą płatności jest bank_transfer")
     additional_fees: Optional[List[str]] = Field(None, description="Opłaty dodatkowe, np. 'opłata za wodę', 'opłata za prąd'")
     deposit: Deposit = Field(None, description="Warunki dotyczące kaucji")
 
